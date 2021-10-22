@@ -1,0 +1,256 @@
+---
+title: "Fractional"
+author: "Heejung Jung"
+date: "10/21/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+"""
+* load libraries
+* load all of the data as saxe, spunt, posner, memory
+* plot covariance
+
+TODO: Oct 21
+1. Histogram for all participants. 
+2. Correlation grids (row: spunt, saxe, memory, posner)
+   Plot of the mean (performance and RT) for each participant - variation between individual 
+3. Fractional any (packages  out there?)
+4. Download HCP. 
+"""
+```{r load libraries}
+library(MASS)
+library(tidyverse)
+library(GGally)
+library(stringr)
+library(psych)
+library(car)
+library(ggplot2)
+library(ggpubr)
+library(ggridges)
+library(dplyr)
+```
+
+
+"""
+tom-saxe
+event04_RT
+src_subject_id
+
+tomspunt
+event03_RT
+
+posner
+event04_RT
+
+memory_test_*
+event03_RT
+"""
+
+/Users/h/Dropbox/projects_dropbox/analysis_fractional/data/dartmouth/d02_preprocessed/sub-0003
+
+
+
+
+### FUNCTION: expect_df load data
+```{r expect dataframe}
+load_df = function(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE ) {
+  # task-fractional_run-02-memory_beh
+  # INPUT:
+  # * TASKNAME (e.g. pain, cognitive, vicarious)
+  # * SUBJECT_VARKEY (e.g. src_subject_id or subject)
+  # A. load data ______________________________________________________________
+  FILENAME = paste('*_task-fractional_*' ,TASKNAME, '*_beh.csv', sep = "")
+  common_path = Sys.glob(file.path(main_dir,'data', 'dartmouth', 'd02_preprocessed',
+                                   'sub-*',FILENAME))
+  filter_path = common_path[!str_detect(common_path,pattern="sub-0001")]
+  
+  DF <- do.call("rbind",lapply(filter_path,FUN=function(files){ read.csv(files)}))
+  is.nan.data.frame <- function(x)
+    do.call(cbind, lapply(x, is.nan))
+  DF[is.nan(DF)] <- NA
+  # subjects as factor
+  #print("subject")
+  DF[,"subject"] = factor(DF[,SUBJECT_VARKEY])
+  DF[,"task"] = TASKNAME
+  # print("line323")
+  # B. plot expect rating NA ___________________________________________________
+  DF_expect_NA = aggregate(DF[,DV], list(DF$subject),function(x) sum(is.na(x)))
+  
+  DF_remove_NA = DF[!is.na(  DF[DV]  ),]
+  
+  DATA <- as.data.frame(DF_remove_NA)
+}
+```
+
+
+```{r plot rt distribution}
+plot_RT_dist = function(DF, X, Y, KEYWORD, LABEL, XLAB, YLAB){
+  ggplot(  DF,aes(x = DF[,X], y = DF[,Y])  ) +
+    geom_density_ridges_gradient(aes(fill = ..x..), scale = 3, size = 0.3    ) +
+    scale_fill_gradientn(colours = c("#0D0887FF", "#CC4678FF", "#F0F921FF"),name = LABEL) +
+    ggtitle(KEYWORD) + xlab(XLAB) + ylab(YLAB) 
+}
+```
+
+# parameters
+
+```{r main directory}
+main_dir = dirname(getwd())
+```
+
+```{r }
+TASKNAME = 'memory_test*'
+SUBJECT_VARKEY = "src_subject_id"
+IV = "param_cue_type"
+DV = "event03_RT"
+MEMORY = load_df(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE)
+```
+
+```{r}
+TASKNAME = 'posner'
+SUBJECT_VARKEY = "src_subject_id"
+IV = "param_cue_type"
+DV = "event04_RT"
+POSNER = load_df(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE)
+```
+
+```{r}
+TASKNAME = 'tomspunt'
+SUBJECT_VARKEY = "src_subject_id"
+IV = "param_cue_type"
+DV = "event03_RT"
+SPUNT = load_df(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE)
+```
+
+```{r}
+TASKNAME = 'tomsaxe'
+SUBJECT_VARKEY = "src_subject_id"
+IV = "param_cue_type"
+DV = "event04_RT"
+SAXE = load_df(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE)
+```
+
+
+
+# plot Reaction time distribution ________________________________________________________________________________
+```{r plot distribution}
+plot_RT_dist(MEMORY, "event03_RT", "subject", "Fractional: Memory", "RT (s)", "Reaction Time (sec)", "subjects")
+plot_RT_dist(SAXE, "event04_RT", "subject", "Fractional: ToM Saxe", "RT (s)", "Reaction Time (sec)", "subjects")
+plot_RT_dist(SPUNT, "event03_RT", "subject", "Fractional: ToM Spunt", "RT (s)", "Reaction Time (sec)", "subjects")
+plot_RT_dist(POSNER, "event04_RT", "subject", "Fractional: Posner", "RT (s)", "Reaction Time (sec)", "subjects")
+
+```
+
+
+# mean per participant and covariance ____________________________________________________________________________________
+
+TODO
+```{r function: subjectwise mean}
+subjectwise_mean = function(DF, GROUPBY, DV, DF_NAME)
+DF_NAME <- DF %>%
+  group_by(GROUPBY) %>%
+  summarise_at(vars(DF[,DV]), list(name = mean))
+
+```
+
+
+```{r}
+subjectwise_mean(MEMORY, subject, event03_RT, memory_meanRT)
+```
+tom-saxe
+event04_RT
+src_subject_id
+
+tomspunt
+event03_RT
+
+posner
+event04_RT
+
+memory_test_*
+event03_RT
+"""
+```{r}
+memory_meanRT = MEMORY %>%
+  group_by(subject) %>%
+  summarise_at(vars(event03_RT), list(meanRT = mean)) 
+
+spunt_meanRT = SPUNT %>%
+  group_by(subject) %>%
+  summarise_at(vars(event03_RT), list(meanRT = mean))
+
+saxe_meanRT = SAXE %>%
+  group_by(subject) %>%
+  summarise_at(vars(event04_RT), list(meanRT = mean))
+
+posner_meanRT = POSNER %>%
+  group_by(subject) %>%
+  summarise_at(vars(event04_RT), list(meanRT = mean))
+
+memory_meanRT$task = "memory"
+spunt_meanRT$task = "spunt"
+saxe_meanRT$task = "saxe"
+posner_meanRT$task = "posner"
+```
+
+
+```{r}
+FULL = memory_meanRT %>%
+    full_join(posner_meanRT, by='subject') %>%
+    full_join(saxe_meanRT, by='subject') %>%
+    full_join(spunt_meanRT, by = 'subject')
+
+```
+
+```{r}
+names(FULL)[names(FULL) == "meanRT.x"] <- "memory"
+names(FULL)[names(FULL) == "meanRT.y"] <- "posner"
+names(FULL)[names(FULL) == "meanRT.x.x"] <- "saxe"
+names(FULL)[names(FULL) == "meanRT.y.y"] <- "spunt"
+```
+
+
+https://arxiv.org/pdf/1201.2577.pdf
+```{r}
+library(ggcorrplot)
+cov_fractional= FULL %>% select(memory, posner, saxe, spunt )
+C2 = cor(cov_fractional, use = "pairwise.complete.obs")
+C2
+```
+
+```{r}
+ggcorrplot(C2)
+```
+
+
+```{r}
+ggpairs(cov_fractional[,c(1:4)], 
+        pch = 19, 
+        columnLabels = c( "memory", "posner", "saxe", "spunt"), 
+        title = "correlation matrix of tasks", 
+          upper = list(continuous =wrap(ggally_cor, displayGrid = FALSE), combo = "box_no_facet", discrete = "facetbar", na =
+    "na"),)
+```
+
+```{r}
+MEMORY$event03_RT
+POSNER$event04_RT
+SAXE$event04_RT
+SPUNT$event03_RT
+```
+
+
+```{r}
+# TODO: example code from conformity.01
+ggpairs(cov_conform[,c(1:4, 6)], 
+        pch = 19, 
+        columnLabels = c("task", "initial value", "tag", "decision difficulty", "initial value x tag"), 
+        title = "correlation matrix of the behavioral regressors", 
+          upper = list(continuous =wrap(ggally_cor, displayGrid = FALSE), combo = "box_no_facet", discrete = "facetbar", na =
+    "na"),)
+```
+
