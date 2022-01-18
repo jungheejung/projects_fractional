@@ -1,0 +1,443 @@
+---
+title: "Fractional performance"
+author: "Heejung Jung"
+date: "10/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+"""
+* load libraries
+* load all of the data as saxe, spunt, posner, memory
+* plot covariance
+
+TODO: Oct 21
+1. Histogram for all participants. 
+2. Correlation grids (row: spunt, saxe, memory, posner)
+   Plot of the mean (performance and RT) for each participant - variation between individual 
+3. Fractional any (packages  out there?)
+4. Download HCP. 
+
+
+"""
+```{r load_libraries, include=FALSE}
+library(MASS)
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+library(GGally)
+library(stringr)
+library(psych)
+library(car)
+library(ggplot2)
+library(ggpubr)
+library(ggridges)
+
+library(ggcorrplot)
+```
+
+
+"""
+tom-saxe
+accuracy
+
+tomspunt
+accuracy
+
+posner
+accuracy
+
+memory_test_*
+test_accuracy
+
+social influence - cognitive
+diff = Left,
+same =Right
+"""
+
+/Users/h/Dropbox/projects_dropbox/analysis_fractional/data/dartmouth/d02_preprocessed/sub-0003
+
+
+
+
+### FUNCTION: expect_df load data
+```{r expect dataframe, include=FALSE}
+load_df = function(TASKNAME, SUBJECT_VARKEY, FILEPATH, DV, EXCLUDE ) {
+  # task-fractional_run-02-memory_beh
+  # INPUT:
+  # * TASKNAME (e.g. pain, cognitive, vicarious)
+  # * SUBJECT_VARKEY (e.g. src_subject_id or subject)
+  # A. load data ______________________________________________________________
+  # FILENAME = paste('*_task-fractional_*' ,TASKNAME, '*_beh.csv', sep = "")
+  # common_path = Sys.glob(file.path(main_dir,'data', 'dartmouth', 'd02_preprocessed',
+  #                                  'sub-*',FILENAME))
+  common_path = Sys.glob(file.path(FILEPATH))
+  filter_path = common_path[!str_detect(common_path,pattern="sub-0001")]
+  
+  DF <- do.call("rbind",lapply(filter_path,FUN=function(files){ read.csv(files)}))
+  is.nan.data.frame <- function(x)
+    do.call(cbind, lapply(x, is.nan))
+  DF[is.nan(DF)] <- NA
+  # subjects as factor
+  #print("subject")
+  DF[,"subject"] = factor(DF[,SUBJECT_VARKEY])
+  DF[,"task"] = TASKNAME
+  # print("line323")
+  # B. plot expect rating NA ___________________________________________________
+  DF_expect_NA = aggregate(DF[,DV], list(DF$subject),function(x) sum(is.na(x)))
+  
+  DF_remove_NA = DF[!is.na(  DF[DV]  ),]
+  
+  DATA <- as.data.frame(DF_remove_NA)
+}
+```
+
+```{r plot rt distribution, include=FALSE}
+plot_dist = function(DF, X, Y, KEYWORD, LABEL, XLAB, YLAB){
+  ggplot(  DF,aes(x = DF[,X], y = DF[,Y])  ) +
+    geom_density_ridges_gradient(aes(fill = ..x..), scale = 3, size = 0.3    ) +
+    scale_fill_gradientn(colours = c("#0D0887FF", "#CC4678FF", "#F0F921FF"),name = LABEL) +
+    ggtitle(KEYWORD) + xlab(XLAB) + ylab(YLAB) 
+}
+```
+
+# parameters
+
+```{r main directory}
+main_dir = dirname(getwd())
+```
+
+```{r load_memory, include=FALSE}
+TASKNAME = 'memory_test*'
+SUBJECT_VARKEY = "src_subject_id"
+IV = "param_cue_type"
+DV = "test_accuracy"
+FILENAME = paste('*_task-fractional_*' ,TASKNAME, '*_beh.csv', sep = "")
+FILEPATH = Sys.glob(file.path(main_dir,'data', 'dartmouth', 'd02_preprocessed','sub-*',FILENAME))
+MEMORY = load_df(TASKNAME, SUBJECT_VARKEY, FILEPATH, DV, EXCLUDE)
+
+MEMORY$accuracy = 0
+MEMORY$accuracy[MEMORY$param_answer== 1 & MEMORY$event03_response_key== 1] <- 1
+MEMORY$accuracy[MEMORY$param_answer== 0 & MEMORY$event03_response_key== 0] <- 1
+MEMORY$accuracy[is.na(MEMORY$event03_RT) ] <- NA
+```
+
+```{r load_posner, include=FALSE}
+TASKNAME = 'posner'
+SUBJECT_VARKEY = "src_subject_id"
+IV = "param_cue_type"
+DV = "accuracy"
+FILENAME = paste('*_task-fractional_*' ,TASKNAME, '*_beh.csv', sep = "")
+FILEPATH = Sys.glob(file.path(main_dir,'data', 'dartmouth', 'd02_preprocessed','sub-*',FILENAME))
+POSNER = load_df(TASKNAME, SUBJECT_VARKEY, FILEPATH, DV, EXCLUDE)
+
+POSNER$accuracy = 0
+POSNER$accuracy[POSNER$param_target_location== "left" & POSNER$event04_response_keyname== "left"] <- 1
+POSNER$accuracy[POSNER$param_target_location== "right" & POSNER$event04_response_keyname== "right"] <- 1
+POSNER$accuracy[is.na(POSNER$event04_RT) ] <- NA
+```
+
+```{r load_spunt, include=FALSE}
+TASKNAME = 'tomspunt'
+SUBJECT_VARKEY = "src_subject_id"
+IV = "param_cue_type"
+DV = "accuracy"
+FILENAME = paste('*_task-fractional_*' ,TASKNAME, '*_beh.csv', sep = "")
+FILEPATH = Sys.glob(file.path(main_dir,'data', 'dartmouth', 'd02_preprocessed','sub-*',FILENAME))
+SPUNT = load_df(TASKNAME, SUBJECT_VARKEY, FILEPATH, DV, EXCLUDE)
+
+# TODO: update this later in the script, but temporarily, fix the accuracy scores here.
+SPUNT$accuracy = 0
+SPUNT$accuracy[SPUNT$param_normative_response == 1 & SPUNT$event03_response_key == 1] <- 1
+SPUNT$accuracy[SPUNT$param_normative_response == 2 & SPUNT$event03_response_key == 3] <- 1
+SPUNT$accuracy[is.na(SPUNT$event03_response_onset) ] <- NA
+```
+
+```{r load_saxe, include=FALSE}
+TASKNAME = 'tomsaxe'
+SUBJECT_VARKEY = "src_subject_id"
+IV = "param_cue_type"
+DV = "accuracy"
+FILENAME = paste('*_task-fractional_*' ,TASKNAME, '*_beh.csv', sep = "")
+FILEPATH = Sys.glob(file.path(main_dir,'data', 'dartmouth', 'd02_preprocessed','sub-*',FILENAME))
+SAXE = load_df(TASKNAME, SUBJECT_VARKEY, FILEPATH, DV, EXCLUDE)
+SAXE$accuracy = 0
+SAXE$accuracy[SAXE$answer == 1 & SAXE$event04_response_key == 1] <- 1
+SAXE$accuracy[SAXE$answer == 2 & SAXE$event04_response_key == 2] <- 1
+SAXE$accuracy[is.na(SAXE$event04_response_onset) ] <- NA
+```
+
+
+TODO: load cognitive performanace from social influence
+```{r load cognitive}
+# load cognitive performance
+TASKNAME = 'cognitive*'
+SUBJECT_VARKEY = "src_subject_id"
+IV = "param_cue_type"
+DV = "event03_stimulusC_response"
+cog_dir = '/Users/h/Dropbox/projects_dropbox/social_influence_analysis'
+FILENAME = paste('*_task-social_*' ,TASKNAME, '*_meta.csv', sep = "")
+FILEPATH = Sys.glob(file.path(cog_dir,'data', 'dartmouth', 'd02_preprocessed_meta','sub-*',FILENAME))
+ROTATE = load_df(TASKNAME, SUBJECT_VARKEY, FILEPATH, DV, EXCLUDE)
+# ROTATE = read.csv('/Users/h/Dropbox/projects_dropbox/social_influence_analysis/data/dartmouth/d02_preprocessed_meta/task-cognitive.csv')
+ROTATE=data.frame(ROTATE)
+ROTATE$accuracy = 0
+ROTATE$subject = factor(ROTATE$src_subject_id)
+ROTATE$accuracy[ROTATE$event03_stimulusC_responsekeyname == 'left' & ROTATE$event03_C_stim_match == 'diff'] <- 1
+ROTATE$accuracy[ROTATE$event03_stimulusC_responsekeyname == 'right' & ROTATE$event03_C_stim_match == 'same'] <- 1
+ROTATE$accuracy[is.na(ROTATE$event03_stimulusC_response) ] <- NA
+```
+
+
+
+
+# mean per participant and covariance ____________________________________________________________________________________
+
+TODO
+https://stackoverflow.com/questions/48344475/inputting-dots-in-dplyr-without-tilde-or-quotes
+```{r function: subjectwise mean}
+# # detach(package:plyr)    
+# library(dplyr)
+# subjectwise_mean = function(DF, GROUPBY, DV, DF_NAME){
+#   GROUPBY = sym(GROUPBY)
+#   DV = sym(DV)
+# DF %>%
+#   dplyr::group_by(.data[[GROUPBY]]) %>%
+#   dplyr::summarise(performance = sum(.data[[DV]]), 
+#             count = n() ) %>%
+#  dplyr::group_by(.data[[GROUPBY]]) %>%
+#  dplyr::mutate(percentage = 100* performance/count)
+# 
+# return(DF)
+# }
+# ---------------
+# subjectwise_mean_perf = function(DF, GROUPBY, DV, DF_NAME){
+# DF %>% 
+#     dplyr::group_by(!!!GROUPBY) %>%
+#   dplyr::summarize(performance = sum(DF$DV, na.rm = TRUE),
+#             count = sum(!is.na(DF$DV))) %>%
+#   dplyr::group_by(GROUPBY) %>%
+#   dplyr::mutate(percentage = 100* performance/count)
+# 
+# DF <-  as.data.frame(DF)
+# }
+# ---------------
+# test = subjectwise_mean_perf(ROTATE, "subject", "accuracy", "accuracy")
+```
+
+# select subset of data from each task
+```{r dplyr_subset, include=FALSE}
+library(dplyr)
+memory_perf = dplyr::group_by(MEMORY, subject) %>%
+  dplyr::summarize(performance = sum(accuracy, na.rm = TRUE),
+            count = sum(!is.na(accuracy))) %>%
+  dplyr::group_by(subject) %>%
+  dplyr::mutate(percentage = 100* performance/count)
+
+spunt_perf = dplyr::group_by(SPUNT, subject) %>%
+  dplyr::summarize(performance = sum(accuracy, na.rm = TRUE),
+            count = sum(!is.na(accuracy))) %>%
+  dplyr::group_by(subject) %>%
+  dplyr::mutate(percentage = 100* performance/count)
+
+saxe_perf = dplyr::group_by(SAXE, subject) %>%
+  dplyr::summarize(performance = sum(accuracy, na.rm = TRUE),
+            count = sum(!is.na(accuracy))) %>%
+  dplyr::group_by(subject) %>%
+  dplyr::mutate(percentage = 100* performance/count)
+
+posner_perf = dplyr::group_by(POSNER, subject) %>%
+  dplyr::summarize(performance = sum(accuracy, na.rm = TRUE),
+            count = sum(!is.na(accuracy))) %>%
+  dplyr::group_by(subject) %>%
+  dplyr::mutate(percentage = 100* performance/count)
+
+rotation_perf = dplyr::group_by(ROTATE, subject) %>%
+  dplyr::summarize(performance = sum(accuracy, na.rm = TRUE),
+            count = sum(!is.na(accuracy))) %>%
+  dplyr::group_by(subject) %>%
+  dplyr::mutate(percentage = 100* performance/count)
+
+memory_perf$task = "memory"
+spunt_perf$task = "spunt"
+saxe_perf$task = "saxe"
+posner_perf$task = "posner"
+rotation_perf$task = "rotation"
+```
+
+
+# plot performancee distribution ________________________________________________________________________________
+```{r plot distribution}
+combinedDf <- rbind(memory_perf, spunt_perf, saxe_perf, posner_perf, rotation_perf)
+# plot_dist(memory_perf, "perf", "subject", "Fractional: Memory",    "RT (s)", "Performance",  "subject")
+# plot_dist(saxe_perf,   "perf", "subject", "Fractional: ToM Saxe",  "RT (s)", "Performance",  "subject")
+# plot_dist(spunt_perf,  "perf", "subject", "Fractional: ToM Spunt", "RT (s)", "Performance",  "subject")
+# plot_dist(posner_perf, "perf", "subject", "Fractional: Posner",    "RT (s)", "Performance",  "subject")
+plot_dist(data.frame(combinedDf), "percentage", "task", "Fractional", "per (%)", "task performance (percentage)", "task")
+```
+
+# Jan 10. Remove spunt outlier
+```{r outlier - SPUNT}
+new_spunt = spunt_perf[ which(spunt_perf$task=='spunt'), ]
+boxplot(new_spunt$percentage, main="Theory of mind Spunt task outlier",
+   ylab="task performance percentage")
+spunt_removed = new_spunt[!new_spunt$percentage %in% boxplot.stats(new_spunt$percentage)$out,]
+
+```
+
+```{r outlier - SAXE}
+newdata = saxe_perf[ which(saxe_perf$task=='saxe'), ]
+boxplot(newdata$percentage, main="Theory of mind Saxe task outlier",
+   ylab="task performance percentage")
+saxe_removed = newdata[!newdata$percentage %in% boxplot.stats(newdata$percentage)$out,]
+
+```
+
+```{r outlier - ROTATION}
+newdata = rotation_perf[ which(rotation_perf$task=='rotation'), ]
+boxplot(newdata$percentage, main="Mental rotation task outlier",
+   ylab="task performance percentage")
+rotation_removed = newdata[!newdata$percentage %in% boxplot.stats(newdata$percentage)$out,]
+
+```
+# plot after removing outlier
+```{r outlier - rotation}
+combinedDf <- rbind(memory_perf, spunt_removed, saxe_removed, posner_perf, rotation_removed)
+plot_dist(data.frame(combinedDf), "percentage", "task", "Fractional - after removing outlier", "per (%)", "task performance (percentage)", "task")
+```
+
+
+
+# combine all dataframes
+```{r}
+FULL_PERF = memory_perf %>%
+    full_join(spunt_removed, by='subject') %>%
+    full_join(saxe_removed, by='subject') %>%
+    full_join(posner_perf, by = 'subject') %>%
+    full_join(rotation_removed, by = 'subject')
+
+```
+```{r}
+len_task = 5
+for (i in 1:len_task ){
+  col_in = 2 + (i - 1)*4
+key = unique(FULL_PERF[5 + (i-1)*4])[!is.na((unique(FULL_PERF[5 + (i-1)*4])))]
+names(FULL_PERF)[2 + (i-1)*4] <- paste(key, "_performance", sep = "")
+names(FULL_PERF)[3 + (i-1)*4] <- paste(key, "_count", sep = "")
+names(FULL_PERF)[4 + (i-1)*4] <- paste(key, "_percentage", sep = "")
+names(FULL_PERF)[5 + (i-1)*4] <- paste(key, "_taskname", sep = "")
+}
+```
+
+
+<!-- ```{r} -->
+<!-- names(FULL_PERF)[names(FULL_PERF) == "performance"] <- "memory" -->
+<!-- names(FULL_PERF)[names(FULL_PERF) == "performance"] <- "spunt" -->
+<!-- names(FULL_PERF)[names(FULL_PERF) == "performance"] <- "saxe" -->
+<!-- names(FULL_PERF)[names(FULL_PERF) == "performance"] <- "posner" -->
+<!-- names(FULL_PERF)[names(FULL_PERF) == "performance"] <- "rotation" -->
+<!-- memory_perf$performance <- unlist(memory_perf$performance) -->
+<!-- spunt_removed$performance <- unlist(spunt_removed$performance) -->
+<!-- saxe_removed$performance <- unlist(saxe_removed$performance) -->
+<!-- posner_perf$performance <- unlist(posner_perf$performance) -->
+<!-- rotation_perf$performance <- unlist(rotation_perf$performance) -->
+<!-- ``` -->
+
+## TODO: better way of changing column names
+```{r}
+# names(FULL_PERF)[names(FULL_PERF) == "percentage.x"] <- "memory"
+# names(FULL_PERF)[names(FULL_PERF) == "percentage.y"] <- "spunt"
+# names(FULL_PERF)[names(FULL_PERF) == "percentage.x.x"] <- "saxe"
+# names(FULL_PERF)[names(FULL_PERF) == "percentage.y.y"] <- "posner"
+# names(FULL_PERF)[names(FULL_PERF) == "percentage"] <- "rotation"
+# ```
+```
+# plot Performance Covariance matrix ________________________________________________________________________________
+## 1-1.) first 4 fractional tasks
+https://arxiv.org/pdf/1201.2577.pdf
+```{r first_four pairwise}
+
+cov_perf= FULL_PERF %>% select(memory_percentage, posner_percentage, saxe_percentage, spunt_percentage, subject )
+C1.1 = cor(cov_perf[1:4], use = "pairwise.complete.obs")
+C1.1
+
+# prior to outlier removal
+# 
+#            memory     posner      saxe     spunt
+# memory 1.00000000 0.05960915 0.1976106 0.7747755
+# posner 0.05960915 1.00000000 0.2458815 0.2385262
+# saxe   0.19761057 0.24588149 1.0000000 0.7250062
+# spunt  0.77477548 0.23852621 0.7250062 1.0000000
+```
+
+## 1-2. spearman rho
+```{r first_four spearman}
+C1.2 = cor(cov_perf[1:4], use = "pairwise.complete.obs", method = "spearman")
+ggcorrplot(C1.2)
+```
+
+## 1-3. pearson correlation
+```{r first_four pearson}
+C1.3 = cor(cov_perf[1:4], use = "pairwise.complete.obs", method = "pearson")
+ggcorrplot(C1.3)
+```
+
+## 1-4
+```{r first_four}
+ggpairs(cov_perf[,c(1:4)], 
+        pch = 19, 
+        columnLabels = c( "memory_percentage", "posner_percentage", "saxe_percentage", "spunt_percentage"), 
+        title = "correlation matrix of tasks", 
+          upper = list(continuous =wrap(ggally_cor, displayGrid = FALSE), combo = "box_no_facet", discrete = "facetbar", na =
+    "na"),)
+```
+
+
+## 2.) 5  tasks + cognitive mental rotation tasks
+https://arxiv.org/pdf/1201.2577.pdf
+```{r first_five pairwise}
+
+five_perf= FULL_PERF %>% select(memory_percentage, posner_percentage, saxe_percentage, spunt_percentage, rotation_percentage, subject )
+C2.1 = cor(five_perf[1:5], use = "pairwise.complete.obs")
+C2.1
+
+# prior to outlier removal
+# 
+#            memory     posner      saxe     spunt
+# memory 1.00000000 0.05960915 0.1976106 0.7747755
+# posner 0.05960915 1.00000000 0.2458815 0.2385262
+# saxe   0.19761057 0.24588149 1.0000000 0.7250062
+# spunt  0.77477548 0.23852621 0.7250062 1.0000000
+```
+
+## 1-2. spearman rho
+```{r first_five spearman}
+C2.2 = cor(five_perf[1:5], use = "pairwise.complete.obs", method = "spearman")
+ggcorrplot(C2.2)
+```
+
+## 1-3. pearson correlation
+```{r first_five pearson}
+C2.3 = cor(five_perf[1:5], use = "pairwise.complete.obs", method = "pearson")
+ggcorrplot(C2.3)
+```
+
+## 1-4
+```{r first_five}
+ggpairs(five_perf[,c(1:5)], 
+        pch = 19, 
+        columnLabels = c( "memory_percentage", "posner_percentage", "saxe_percentage", "spunt_percentage", "rotation_percentage"), 
+        title = "correlation matrix of tasks", 
+          upper = list(continuous =wrap(ggally_cor, displayGrid = FALSE), combo = "box_no_facet", discrete = "facetbar", na =
+    "na"),)
+```
+
+# analyzing fractional factorials
+https://online.stat.psu.edu/stat503/lesson/8/8.2
+https://www.coursera.org/lecture/factorial-fractional-factorial-designs/why-do-fractional-factorial-designs-work-ABY0e
+https://www.sciencedirect.com/topics/engineering/fractional-factorial-design
+https://www.math.montana.edu/jobo/st578/sec5a.pdf
+https://imai.fas.harvard.edu/research/files/int.pdf

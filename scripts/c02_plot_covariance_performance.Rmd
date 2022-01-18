@@ -1,7 +1,7 @@
 ---
-title: "Fractional reaction time"
+title: "Fractional performance"
 author: "Heejung Jung"
-date: "10/21/2021"
+date: "10/22/2021"
 output: html_document
 ---
 
@@ -23,7 +23,7 @@ TODO: Oct 21
 
 
 """
-```{r load libraries}
+```{r load_libraries, include=FALSE}
 library(MASS)
 library(tidyverse)
 library(GGally)
@@ -34,32 +34,31 @@ library(ggplot2)
 library(ggpubr)
 library(ggridges)
 library(dplyr)
+library(ggcorrplot)
 ```
 
 
 """
 tom-saxe
-event04_RT
-src_subject_id
+accuracy
 
 tomspunt
-event03_RT
+accuracy
 
 posner
-event04_RT
+accuracy
 
 memory_test_*
-event03_RT
+test_accuracy
 """
 
 /Users/h/Dropbox/projects_dropbox/analysis_fractional/data/dartmouth/d02_preprocessed/sub-0003
 
-# TODO:
-# identify how many accurate, missed, NA answers there were per task
+
 
 
 ### FUNCTION: expect_df load data
-```{r expect dataframe}
+```{r expect dataframe, include=FALSE}
 load_df = function(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE ) {
   # task-fractional_run-02-memory_beh
   # INPUT:
@@ -89,9 +88,8 @@ load_df = function(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE ) {
 }
 ```
 
-
-```{r plot rt distribution}
-plot_RT_dist = function(DF, X, Y, KEYWORD, LABEL, XLAB, YLAB){
+```{r plot rt distribution, include=FALSE}
+plot_dist = function(DF, X, Y, KEYWORD, LABEL, XLAB, YLAB){
   ggplot(  DF,aes(x = DF[,X], y = DF[,Y])  ) +
     geom_density_ridges_gradient(aes(fill = ..x..), scale = 3, size = 0.3    ) +
     scale_fill_gradientn(colours = c("#0D0887FF", "#CC4678FF", "#F0F921FF"),name = LABEL) +
@@ -105,11 +103,11 @@ plot_RT_dist = function(DF, X, Y, KEYWORD, LABEL, XLAB, YLAB){
 main_dir = dirname(getwd())
 ```
 
-```{r }
+```{r load_memory, include=FALSE}
 TASKNAME = 'memory_test*'
 SUBJECT_VARKEY = "src_subject_id"
 IV = "param_cue_type"
-DV = "event03_RT"
+DV = "test_accuracy"
 MEMORY = load_df(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE)
 
 MEMORY$accuracy = 0
@@ -118,24 +116,24 @@ MEMORY$accuracy[MEMORY$param_answer== 0 & MEMORY$event03_response_key== 0] <- 1
 MEMORY$accuracy[is.na(MEMORY$event03_RT) ] <- NA
 ```
 
-```{r}
+```{r load_posner, include=FALSE}
 TASKNAME = 'posner'
 SUBJECT_VARKEY = "src_subject_id"
 IV = "param_cue_type"
-DV = "event04_RT"
+DV = "accuracy"
 POSNER = load_df(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE)
 
 POSNER$accuracy = 0
-POSNER$accuracy[POSNER$event03_target_type== "left" & POSNER$event04_response_keyname== "left"] <- 1
-POSNER$accuracy[POSNER$event03_target_type== "right" & POSNER$event04_response_keyname== "right"] <- 1
+POSNER$accuracy[POSNER$param_target_location== "left" & POSNER$event04_response_keyname== "left"] <- 1
+POSNER$accuracy[POSNER$param_target_location== "right" & POSNER$event04_response_keyname== "right"] <- 1
 POSNER$accuracy[is.na(POSNER$event04_RT) ] <- NA
 ```
 
-```{r}
+```{r load_spunt, include=FALSE}
 TASKNAME = 'tomspunt'
 SUBJECT_VARKEY = "src_subject_id"
 IV = "param_cue_type"
-DV = "event03_RT"
+DV = "accuracy"
 SPUNT = load_df(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE)
 
 # TODO: update this later in the script, but temporarily, fix the accuracy scores here.
@@ -145,13 +143,12 @@ SPUNT$accuracy[SPUNT$param_normative_response == 2 & SPUNT$event03_response_key 
 SPUNT$accuracy[is.na(SPUNT$event03_response_onset) ] <- NA
 ```
 
-```{r}
+```{r load_saxe, include=FALSE}
 TASKNAME = 'tomsaxe'
 SUBJECT_VARKEY = "src_subject_id"
 IV = "param_cue_type"
-DV = "event04_RT"
+DV = "accuracy"
 SAXE = load_df(TASKNAME, SUBJECT_VARKEY, IV, DV, EXCLUDE)
-
 SAXE$accuracy = 0
 SAXE$accuracy[SAXE$answer == 1 & SAXE$event04_response_key == 1] <- 1
 SAXE$accuracy[SAXE$answer == 2 & SAXE$event04_response_key == 2] <- 1
@@ -160,99 +157,131 @@ SAXE$accuracy[is.na(SAXE$event04_response_onset) ] <- NA
 
 
 
-# plot Reaction time distribution ________________________________________________________________________________
-```{r plot distribution}
-plot_RT_dist(MEMORY, "event03_RT", "subject", "Fractional: Memory", "RT (s)", "Reaction Time (sec)", "subjects")
-plot_RT_dist(SAXE, "event04_RT", "subject", "Fractional: ToM Saxe", "RT (s)", "Reaction Time (sec)", "subjects")
-plot_RT_dist(SPUNT, "event03_RT", "subject", "Fractional: ToM Spunt", "RT (s)", "Reaction Time (sec)", "subjects")
-plot_RT_dist(POSNER, "event04_RT", "subject", "Fractional: Posner", "RT (s)", "Reaction Time (sec)", "subjects")
 
-```
 
 
 # mean per participant and covariance ____________________________________________________________________________________
 
 TODO
 ```{r function: subjectwise mean}
-subjectwise_mean = function(DF, GROUPBY, DV, DF_NAME)
-DF_NAME <- DF %>%
-  group_by(GROUPBY) %>%
-  summarise_at(vars(DF[,DV]), list(name = mean))
+subjectwise_mean = function(DF, GROUPBY, DV, DF_NAME){
+DF %>%
+  group_by(.data[[GROUPBY]]) %>%
+  summarise(performance = sum(.data[[DV]]), 
+            count = n() ) %>%
+ group_by(.data[[GROUPBY]]) %>%
+ mutate(percentage = 100* performance/count)
 
+DF <-  as.data.frame(DF)
+}
+
+```
+```{r}
+memory_perf = subjectwise_mean(MEMORY, "subject", "test_accuracy", "")
+```
+
+# select subset of data from each task
+```{r dplyr_subset, include=FALSE}
+
+memory_perf = MEMORY %>%
+  group_by(subject) %>%
+  summarise(performance = sum(accuracy, na.rm = TRUE), 
+            count = sum(!is.na(accuracy)) ) %>%
+ group_by(subject) %>%
+ mutate(percentage = 100* performance/count)
+
+spunt_perf = SPUNT %>%
+  group_by(subject) %>%
+  summarise(performance = sum(accuracy, na.rm = TRUE), 
+            count = sum(!is.na(accuracy)) ) %>%
+ group_by(subject) %>%
+ mutate(percentage = 100* performance/count)
+
+saxe_perf = SAXE %>%
+  group_by(subject) %>%
+  summarise(performance = sum(accuracy, na.rm = TRUE), 
+            count = sum(!is.na(accuracy)) ) %>%
+ group_by(subject) %>%
+ mutate(percentage = 100* performance/count)
+
+posner_perf = POSNER %>%
+  group_by(subject) %>%
+  summarise(performance = sum(accuracy, na.rm = TRUE), 
+            count = sum(!is.na(accuracy)) ) %>%
+ group_by(subject) %>%
+ mutate(percentage = 100* performance/count)
+
+
+memory_perf$task = "memory"
+spunt_perf$task = "spunt"
+saxe_perf$task = "saxe"
+posner_perf$task = "posner"
 ```
 
 
 ```{r}
-# subjectwise_mean(MEMORY, subject, event03_RT, memory_meanRT)
-```
-tom-saxe
-event04_RT
-src_subject_id
-
-tomspunt
-event03_RT
-
-posner
-event04_RT
-
-memory_test_*
-event03_RT
-"""
-```{r}
-memory_meanRT = MEMORY %>%
-  group_by(subject) %>%
-  summarise_at(vars(event03_RT), list(meanRT = mean)) 
-
-spunt_meanRT = SPUNT %>%
-  group_by(subject) %>%
-  summarise_at(vars(event03_RT), list(meanRT = mean))
-
-saxe_meanRT = SAXE %>%
-  group_by(subject) %>%
-  summarise_at(vars(event04_RT), list(meanRT = mean))
-
-posner_meanRT = POSNER %>%
-  group_by(subject) %>%
-  summarise_at(vars(event04_RT), list(meanRT = mean))
-
-memory_meanRT$task = "memory"
-spunt_meanRT$task = "spunt"
-saxe_meanRT$task = "saxe"
-posner_meanRT$task = "posner"
-```
-
-
-```{r}
-FULL = memory_meanRT %>%
-    full_join(posner_meanRT, by='subject') %>%
-    full_join(saxe_meanRT, by='subject') %>%
-    full_join(spunt_meanRT, by = 'subject')
+FULL_PERF = memory_perf %>%
+    full_join(spunt_perf, by='subject') %>%
+    full_join(saxe_perf, by='subject') %>%
+    full_join(posner_perf, by = 'subject')
 
 ```
 
 ```{r}
-names(FULL)[names(FULL) == "meanRT.x"] <- "memory"
-names(FULL)[names(FULL) == "meanRT.y"] <- "posner"
-names(FULL)[names(FULL) == "meanRT.x.x"] <- "saxe"
-names(FULL)[names(FULL) == "meanRT.y.y"] <- "spunt"
+names(FULL_PERF)[names(FULL_PERF) == "performance"] <- "memory"
+names(FULL_PERF)[names(FULL_PERF) == "performance"] <- "spunt"
+names(FULL_PERF)[names(FULL_PERF) == "performance"] <- "saxe"
+names(FULL_PERF)[names(FULL_PERF) == "performance"] <- "posner"
+memory_perf$performance <- unlist(memory_perf$performance)
+spunt_perf$performance <- unlist(spunt_perf$performance)
+saxe_perf$performance <- unlist(saxe_perf$performance)
+posner_perf$performance <- unlist(posner_perf$performance)
+
 ```
 
+```{r}
+names(FULL_PERF)[names(FULL_PERF) == "percentage.x"] <- "memory"
+names(FULL_PERF)[names(FULL_PERF) == "percentage.y"] <- "spunt"
+names(FULL_PERF)[names(FULL_PERF) == "percentage.x.x"] <- "saxe"
+names(FULL_PERF)[names(FULL_PERF) == "percentage.y.y"] <- "posner"
+```
+# plot performancee distribution ________________________________________________________________________________
+```{r plot distribution}
+combinedDf <- rbind(memory_perf, spunt_perf, saxe_perf, posner_perf)
+# plot_dist(memory_perf, "perf", "subject", "Fractional: Memory",    "RT (s)", "Performance",  "subject")
+# plot_dist(saxe_perf,   "perf", "subject", "Fractional: ToM Saxe",  "RT (s)", "Performance",  "subject")
+# plot_dist(spunt_perf,  "perf", "subject", "Fractional: ToM Spunt", "RT (s)", "Performance",  "subject")
+# plot_dist(posner_perf, "perf", "subject", "Fractional: Posner",    "RT (s)", "Performance",  "subject")
+plot_dist(data.frame(combinedDf), "percentage", "task", "Fractional", "per (%)", "task performance (percentage)", "task")
+```
+
+
+
+# plot Performance Covariance matrix ________________________________________________________________________________
 
 https://arxiv.org/pdf/1201.2577.pdf
 ```{r}
-library(ggcorrplot)
-cov_fractional= FULL %>% select(memory, posner, saxe, spunt )
-C2 = cor(cov_fractional, use = "pairwise.complete.obs")
+
+cov_perf= FULL_PERF %>% select(memory, posner, saxe, spunt, subject )
+C2 = cor(cov_perf[1:4], use = "pairwise.complete.obs")
 C2
 ```
 
+# spearman rho
 ```{r}
+C2 = cor(cov_perf[1:4], use = "pairwise.complete.obs", method = "spearman")
+ggcorrplot(C2)
+```
+
+# pearson correlation
+```{r}
+C2 = cor(cov_perf[1:4], use = "pairwise.complete.obs", method = "pearson")
 ggcorrplot(C2)
 ```
 
 
 ```{r}
-ggpairs(cov_fractional[,c(1:4)], 
+ggpairs(cov_perf[,c(2:5)], 
         pch = 19, 
         columnLabels = c( "memory", "posner", "saxe", "spunt"), 
         title = "correlation matrix of tasks", 
@@ -260,25 +289,4 @@ ggpairs(cov_fractional[,c(1:4)],
     "na"),)
 ```
 
-```{r}
-# ggpairs(C2)
-```
-
-```{r}
-MEMORY$event03_RT
-POSNER$event04_RT
-SAXE$event04_RT
-SPUNT$event03_RT
-```
-
-
-```{r}
-# TODO: example code from conformity.01
-# ggpairs(cov_conform[,c(1:4, 6)], 
-#         pch = 19, 
-#         columnLabels = c("task", "initial value", "tag", "decision difficulty", "initial value x tag"), 
-#         title = "correlation matrix of the behavioral regressors", 
-#           upper = list(continuous =wrap(ggally_cor, displayGrid = FALSE), combo = "box_no_facet", discrete = "facetbar", na =
-#     "na"),)
-```
 
