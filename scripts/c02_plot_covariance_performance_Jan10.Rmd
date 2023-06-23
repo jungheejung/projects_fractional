@@ -441,3 +441,10 @@ https://www.coursera.org/lecture/factorial-fractional-factorial-designs/why-do-f
 https://www.sciencedirect.com/topics/engineering/fractional-factorial-design
 https://www.math.montana.edu/jobo/st578/sec5a.pdf
 https://imai.fas.harvard.edu/research/files/int.pdf
+
+### save five_perf
+```{r}
+dir.create(file.path(main_dir, 'analysis', 'r01_perf'),recursive = TRUE)
+write.csv(five_perf,file.path(main_dir, 'analysis', 'r01_perf', 'performance.csv'), row.names = FALSE)
+```
+
