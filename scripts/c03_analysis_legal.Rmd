@@ -1,0 +1,188 @@
+---
+title: "performance in legal "
+output: html_notebook
+---
+
+"""
+load performance
+transform into design matrix
+stack all performance matrices
+subjects, tasks per row
+performance on one column
+"""
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+library(tidyverse)
+library(psych)
+library(car)
+
+```
+
+```{r}
+model = 'sv'
+dist = 't'
+
+```
+
+```{r main directory}
+main_dir = dirname(getwd())
+# TODO: figure out how to find current directory of script
+main_dir = "/Users/h/Dropbox/projects_dropbox/spacetop_fractional_analysis"
+data_dir = file.path(main_dir, 'data')
+FIVE_PERF = read.csv(file.path(main_dir, 'analysis', 'r01_perf', 'performance.csv'))
+dat = read.csv(file.path(main_dir, 'analysis', 'r01_perf', 'concat_perf.csv'))
+dat$uid = dat$subject
+rating_type = 'percentage'
+```
+
+```{r}
+switch(model, 
+       'sv'= {
+         modelstr <- paste('models/sv_', dist, '.stan', sep='')
+                  dat <- dat %>% filter(rating_type=='percentage') %>% 
+           select(subject, performance, count, percentage, task, uid)
+       },
+         # dat <- dat %>% filter(rating_type=='rating') %>% 
+         #   select(uid, scenario, physical, history, witness, rating, group)
+       
+       
+       '2v' = {
+         modelstr <- paste('models/mv_', dist, '.stan', sep='')
+         # dat <- dat %>% 
+         #   filter(rating_type=='rating' | rating_type=='rate_punishment') %>% 
+         #   mutate(rating_type=droplevels(rating_type)) %>%
+         #   select(uid, scenario, physical, history, witness, rating, rating_type, group) 
+       },
+       
+       'mv' = {
+         modelstr <- paste('mv_', dist, '.stan', sep='')
+         # dat <- dat %>% 
+         #   select(uid, scenario, physical, history, witness, rating, rating_type, group) %>%
+         #   filter(rating_type != 'guilty') %>%
+         #   mutate(rating_type=droplevels(rating_type))
+       },
+       
+       'demos' = {
+         modelstr <- paste('sv_', dist, '.stan', sep='')
+         # dat <- dat %>% filter(rating_type=='rating') %>% 
+         #   select(uid, scenario, physical, history, witness, rating, group,
+         #          nonwhite, hispanic, female)
+       }
+)
+
+```
+
+```{r reorder levels appropriately}
+model = 'sv'
+dat$task <- factor(dat$task, levels=c( "rotation", "memory", "spunt", "saxe", "posner"))
+```
+
+
+```{r final cleanup}
+dat <- dat %>% na.omit() %>% mutate(uid=as.integer(droplevels(uid)))
+
+```
+```{r}
+# number of subjects
+Nsub <- length(unique(dat$uid))
+
+# get upper and lower-bounded censored data
+L <- min(dat$percentage)
+U <- max(dat$percentage)
+# get censoring data frame
+R <- dat$percentage
+cens <- (R == U) - (R == L)
+if ('rating_type' %in% names(dat)) {
+  Ri <- as.integer(as.factor(dat$rating_type))
+}
+
+#get design matrix (i.e., convert categoricals to binaries)
+if (model == 'demos'){
+  form <- as.formula("~ memory + spunt + saxe + posner + rotation")
+} else {
+  form <- as.formula("~ task")
+}
+
+X <- model.matrix(form, data=dat)
+```
+
+
+```{r}
+# make data frame of predictors corresponding to columns in X
+prednames <- colnames(X)
+prednames[1] <- 'baseline'
+preds <- data.frame(evidence=prednames)
+
+```
+
+```{r}
+# break out ratings, subject mapping}
+if ('rating_type' %in% names(dat)) {
+  Nr <- nlevels(dat$rating_type) 
+} else {
+  Nr <- 1
+}
+```
+
+```{r}
+S <- dat$uid
+C <- as.numeric(dat$task)
+
+# useful dimensions
+N <- dim(X)[1]
+P <- dim(X)[2]
+Nc <- length(levels(dat$task))
+```
+
+
+```{r}
+
+# write some stan
+library(rstan)
+
+# write compiled model and use multiple chains in parallel
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
+# run some stan
+nchains <- 4
+if ('rating_type' %in% names(dat)) {
+  stan_dat <- list(L=L, U=U, Nsub=Nsub, Nc=Nc, N=N, Nr=Nr, P=P, R=R, Ri=Ri,
+                   C=C, X=X, S=S, cens=cens)
+  pars <- c('mu', 'eta', 'gamma', 'tau', 'sigma', 'Omega')
+  iter <- 2000
+  thin <- 2
+} else {
+  stan_dat <- list(L=L, U=U, Nsub=Nsub, Nc=Nc, N=N, P=P, R=R, C=C,
+                   X=X, S=S, cens=cens)
+  pars <- c('mu', 'eta', 'gamma', 'tau', 'sigma')
+  iter <- 1000
+  thin <- 1
+}
+
+if (dist == 't') {
+  pars <- c(pars, 'nu_eps', 'nu_delta')
+}
+
+
+# need to initialize sigma to be large so that all ratings have nonzero probability
+init <- function() {
+  list(sigma = 25 + rnorm(Nr))
+}
+
+```
+```{r}
+# fit model
+fit <- stan(file= modelstr, data = stan_dat, pars=pars, iter = iter, 
+            chains = nchains, thin=thin, init=init, seed=stan_seed)
+
+# save data
+save.image(paste(data_dir, 
+                 paste('stan', 'model', 'output', model, dist, sep='_'), 
+                 '.rdata', sep='')
+           )
+```
+
