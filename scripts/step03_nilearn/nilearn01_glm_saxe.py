@@ -17,6 +17,7 @@ import os, glob, re
 from os.path import join
 from pathlib import Path
 import nilearn
+import argparse
 from nilearn import image, plotting
 from nilearn.glm.first_level import FirstLevelModel
 from nilearn.glm import threshold_stats_img
@@ -36,29 +37,53 @@ __status__ = "Development"
 # %% ---------------------------------
 #           parameters
 # ------------------------------------
-sub = 'sub-0009'
-ses = 'ses-04'
-run_num = 2
-task_name = 'saxe'
-main_dir = '/Users/h/Documents/projects_local/spacetop_fractional_analysis'
-beh_dir = join(main_dir, 'data' , 'beh', 'beh03_bids', sub)
-fmriprep_dir = '/dartfs-hpc/rc/lab/C/CANlab/labdata/data/spacetop_data/derivatives/fmriprep/results/fmriprep'
-fmriprep_dir = '/Users/h/Documents/projects_local/sandbox'
-glm_savedir = join(main_dir, 'analysis', 'fmri', 'nilearn', 'glm', sub)
-Path(glm_savedir).mkdir( parents=True, exist_ok=True )
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--slurm-id", type=int,
+                    help="specify slurm array id")
+parser.add_argument("--task", type=str,
+                    help="taskname")
+parser.add_argument("--fmriprep-dir", type=str,
+                    help="filepath where fmriprep preprocessed files are")
+args = parser.parse_args()
+slurm_id = args.slurm_id
+task_name = args.task
+fmriprep_dir = args.fmriprep_dir
+# sub = 'sub-0009'
+# ses = 'ses-04'
+# run_num = 2
+# task_name = 'saxe'
+# main_dir = '/Users/h/Documents/projects_local/spacetop_fractional_analysis'
+current_path = Path.cwd()
+main_dir = current_path.parent.parent #'/Users/h/Documents/projects_local/spacetop_fractional_analysis'
+beh_dir = join(main_dir, 'data' , 'beh', 'beh03_bids')
+# fmriprep_dir = '/dartfs-hpc/rc/lab/C/CANlab/labdata/data/spacetop_data/derivatives/fmriprep/results/fmriprep'
+# fmriprep_dir = '/Users/h/Documents/projects_local/sandbox'
+
+# -> glob behavioral file 
+saxe_flist = glob.glob(join(beh_dir, '**', f'*{task_name}*.csv'), recursive=True)
+saxe_behfpath = saxe_flist[slurm_id]
+saxe_behfname = os.path.basename(saxe_behfpath)
+# -> extract sub, ses, task , run 
+sub = re.search(r'sub-\d+', saxe_behfname).group(0)
+ses = re.search(r'ses-\d+', saxe_behfname).group(0)
+run = re.search(r'run-\d+', saxe_behfname).group(0)
+run_num = int(re.search(r'run-(\d+)', saxe_behfname).group(1))
+task_name = re.search(r'run-\d+-(\w+)_beh', saxe_behfname).group(1)
+    # beh_fpath = join(beh_inputdir, sub, f"{sub}_{ses}_task-fractional_{run_bids}-tomsaxe_beh.csv")
+# beh_df = pd.read_csv(saxe_behfpath)
+glm_savedir = join(main_dir, 'analysis', 'fmri', 'nilearn', 'glm', f'task-{task_name}', sub)
+Path(glm_savedir).mkdir( parents=True, exist_ok=True )
+# -> reconstruct 
 # %% ---------------------------------
 #     load beh, fmri, confound data
 # ------------------------------------
-# load events.tsv:
-events_fname = '/Users/h/Documents/projects_local/spacetop_fractional_analysis/data/beh/beh03_bids/sub-0009/sub-0009_ses-04_task-tomsaxe_beh_run-02_events.tsv'
-# join(beh_dir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_events.tsv")
-# /Users/h/Documents/projects_local/spacetop_fractional_analysis/data/beh/beh03_bids/sub-0009/sub-0009_ses-04_task-tomsaxe_beh_run-02_events.tsv
+#   - load events.tsv:
+events_fname = saxe_behfpath #join(beh_dir, f"{sub}_{ses}_task-{task_name}_{run}_events.tsv")
 events = pd.read_csv(events_fname, sep = '\t')
-# load brain img:
-# sub-0009_ses-04_task-fractional_acq-mb8_run-2_space-MNI152NLin2009cAsym_desc-preproc_bold
+#   - load brain img:
 fmri_img = nilearn.image.load_img(join(fmriprep_dir, sub, 'ses-04', 'func', f'{sub}_ses-04_task-fractional_acq-mb8_run-{run_num}_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz'))
-# %% nuissance cov  
+#   - nuissance cov  
 confounds_file = os.path.join(fmriprep_dir, sub, ses, 'func', f'{sub}_{ses}_task-fractional_acq-mb8_run-{run_num}_desc-confounds_timeseries.tsv')
 confounds = pd.read_csv(confounds_file, sep = '\t')
 filter_col = [col for col in confounds if col.startswith('motion')]
@@ -105,10 +130,7 @@ glm_parameters = {'drift_model':None,
     'target_shape': None, #
     'verbose': 0}
 
-fmri_glm = FirstLevelModel(
-    **glm_parameters
-)
-
+fmri_glm = FirstLevelModel(**glm_parameters)
 fmri_glm = fmri_glm.fit(fmri_img, 
                         events=events, 
                         confounds=subset_confounds.fillna(0))
@@ -120,12 +142,9 @@ plotting.plot_design_matrix(design_matrix,
                             output_file=join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_designmatrix.png"))
 plt.close()
 
-plt.plot(design_matrix["false_belief"])
-plt.xlabel("scan")
-plt.title("false belief conditions")
+plt.plot(design_matrix["false_belief"]); plt.xlabel("scan"); plt.title("false belief conditions")
 plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_boldsignal.png")) 
 plt.close() 
-
 
 # %% ---------------------------------
 #           contrasts
@@ -184,5 +203,3 @@ beta_rating.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{ru
 
 Z_belief_gt_photo.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-beliefGTphoto_stat-zmap.nii.gz"))
 Z_rating.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-rating_stat-zmap.nii.gz"))
-
-# %%
