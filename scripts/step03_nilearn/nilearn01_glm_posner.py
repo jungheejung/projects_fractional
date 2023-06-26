@@ -58,7 +58,7 @@ sub = re.search(r'sub-\d+', posner_behfname).group(0)
 ses = re.search(r'ses-\d+', posner_behfname).group(0)
 run = re.search(r'run-\d+', posner_behfname).group(0)
 run_num = int(re.search(r'run-(\d+)', posner_behfname).group(1))
-task_name = re.search(r'run-\d+-(\w+)_beh', posner_behfname).group(1)
+task_name = re.search(r'run-\d+-(\w+)_', posner_behfname).group(1)
 
 glm_savedir = join(main_dir, 'analysis', 'fmri', 'nilearn', 'glm', f'task-{task_name}', sub)
 Path(glm_savedir).mkdir( parents=True, exist_ok=True )
