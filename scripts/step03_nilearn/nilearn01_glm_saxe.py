@@ -61,7 +61,9 @@ beh_dir = join(main_dir, 'data' , 'beh', 'beh03_bids')
 # fmriprep_dir = '/Users/h/Documents/projects_local/sandbox'
 
 # -> glob behavioral file 
-saxe_flist = glob.glob(join(beh_dir, '**', f'*{task_name}*.csv'), recursive=True)
+saxe_flist = glob.glob(join(beh_dir, '**', f'*{task_name}*.tsv'), recursive=True)
+print(main_dir)
+print(saxe_flist)
 saxe_behfpath = saxe_flist[slurm_id]
 saxe_behfname = os.path.basename(saxe_behfpath)
 # -> extract sub, ses, task , run 
@@ -69,7 +71,7 @@ sub = re.search(r'sub-\d+', saxe_behfname).group(0)
 ses = re.search(r'ses-\d+', saxe_behfname).group(0)
 run = re.search(r'run-\d+', saxe_behfname).group(0)
 run_num = int(re.search(r'run-(\d+)', saxe_behfname).group(1))
-task_name = re.search(r'run-\d+-(\w+)_beh', saxe_behfname).group(1)
+#task_name = re.search(r'run-\d+-(\w+)_', saxe_behfname).group(1)
     # beh_fpath = join(beh_inputdir, sub, f"{sub}_{ses}_task-fractional_{run_bids}-tomsaxe_beh.csv")
 # beh_df = pd.read_csv(saxe_behfpath)
 glm_savedir = join(main_dir, 'analysis', 'fmri', 'nilearn', 'glm', f'task-{task_name}', sub)
@@ -81,6 +83,7 @@ Path(glm_savedir).mkdir( parents=True, exist_ok=True )
 #   - load events.tsv:
 events_fname = saxe_behfpath #join(beh_dir, f"{sub}_{ses}_task-{task_name}_{run}_events.tsv")
 events = pd.read_csv(events_fname, sep = '\t')
+print(f"events_fname: {events_fname}")
 #   - load brain img:
 fmri_img = nilearn.image.load_img(join(fmriprep_dir, sub, 'ses-04', 'func', f'{sub}_ses-04_task-fractional_acq-mb8_run-{run_num}_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz'))
 #   - nuissance cov  
