@@ -58,7 +58,6 @@ sub = re.search(r'sub-\d+', posner_behfname).group(0)
 ses = re.search(r'ses-\d+', posner_behfname).group(0)
 run = re.search(r'run-\d+', posner_behfname).group(0)
 run_num = int(re.search(r'run-(\d+)', posner_behfname).group(1))
-task_name = re.search(r'run-\d+-(\w+)_', posner_behfname).group(1)
 
 glm_savedir = join(main_dir, 'analysis', 'fmri', 'nilearn', 'glm', f'task-{task_name}', sub)
 Path(glm_savedir).mkdir( parents=True, exist_ok=True )
@@ -198,3 +197,5 @@ beta_targetresponse.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}
 Z_invalid_gt_valid.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-invalidGTvalid_stat-zmap.nii.gz"))
 Z_targetresponse.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-targetresponse_stat-zmap.nii.gz"))
 
+
+print(f"---------------:+: COMPLETE :+:------------------")
