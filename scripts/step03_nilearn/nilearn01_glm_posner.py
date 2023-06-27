@@ -77,7 +77,7 @@ Path(glm_savedir).mkdir( parents=True, exist_ok=True )
 # ------------------------------------
 #   -> load events.tsv:
 # events_fname = posner_behfpath #join(beh_dir, f"{sub}_{ses}_task-{task_name}_{run}_events.tsv")
-events = pd.read_csv(events_fname, sep = '\t')
+events = pd.read_csv(posner_behfpath, sep = '\t')
 #   -> load brain img:
 fmri_img = nilearn.image.load_img(join(fmriprep_dir, sub, 'ses-04', 'func', f'{sub}_ses-04_task-fractional_acq-mb8_run-{run_num}_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz'))
 #   -> nuissance cov  
@@ -86,7 +86,7 @@ confounds = pd.read_csv(confounds_file, sep = '\t')
 filter_col = [col for col in confounds if col.startswith('motion')]
 default_csf_24dof = ['csf', 'trans_x', 'trans_x_derivative1', 'trans_x_power2', 'trans_x_derivative1_power2',
                             'trans_y', 'trans_y_derivative1', 'trans_y_derivative1_power2', 'trans_y_power2',
-                            'trans_z', 'trans_z_derivative1', 'trans_z_derivative1_power2', 'trans_z_power2', 
+                            'trans_z', 'trans_z_derivative1', 'trans_z_derivative1_power2', 'trans_z_power2',
                             'rot_x', 'rot_x_derivative1', 'rot_x_derivative1_power2', 'rot_x_power2', 
                             'rot_y', 'rot_y_derivative1', 'rot_y_derivative1_power2', 'rot_y_power2', 
                             'rot_z', 'rot_z_derivative1', 'rot_z_derivative1_power2', 'rot_z_power2']
