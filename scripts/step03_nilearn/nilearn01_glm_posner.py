@@ -172,7 +172,7 @@ plotting.plot_stat_map(
     cut_coords=5,
     display_mode='mosaic',
     black_bg=True,
-    title="False belief > False photo (Z > 3)",
+    title="Invalid > Valid (Z > 3)",
 )
 plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-invalidGTvalid_stat-zmap.png")) 
 plt.close() 
