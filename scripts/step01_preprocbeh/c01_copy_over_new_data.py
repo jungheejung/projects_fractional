@@ -8,7 +8,7 @@ from pathlib import Path
 
 # %%
 current_dir = os.getcwd()
-analysis_repo_dir = Path(current_dir).parents[0]
+analysis_repo_dir = Path(current_dir).parents[1]
 print("top dir: ".format(analysis_repo_dir))
 data_repo_dir = "/Users/h/Documents/projects_local/d_beh" # USER, INSERT PATH
 
@@ -32,8 +32,8 @@ for ind, src_fname in enumerate(src):
   
     # print(src[0])
     # print(os.path.basename(src_fname))
-    dst1_fpath = os.path.join( analysis_repo_dir, 'data', 'dartmouth', 'd01_rawbeh', 'sub-'+num[0])
-    dst2_fpath = os.path.join( analysis_repo_dir, 'data', 'dartmouth', 'd02_preprocessed', 'sub-'+num[0])
+    dst1_fpath = os.path.join( analysis_repo_dir, 'data', 'beh', 'beh01_raw', 'sub-'+num[0])
+    dst2_fpath = os.path.join( analysis_repo_dir, 'data', 'beh', 'beh02_preproc', 'sub-'+num[0])
     Path(dst1_fpath).mkdir( parents=True, exist_ok=True )
     Path(dst2_fpath).mkdir( parents=True, exist_ok=True )
     
@@ -51,3 +51,5 @@ for ind, src_fname in enumerate(src):
         print("copying file over")
 
 
+
+# %%
