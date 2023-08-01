@@ -16,7 +16,7 @@ ID=$((SLURM_ARRAY_TASK_ID-1))
 MAINDIR='/dartfs-hpc/rc/lab/C/CANlab/labdata/projects/spacetop_projects_fractional'
 FMRIPREPDIR='/dartfs-hpc/rc/lab/C/CANlab/labdata/data/spacetop_data/derivatives/fmriprep/results/fmriprep'
 # OUTPUTDIR='/dartfs-hpc/rc/lab/C/CANlab/labdata/data/spacetop_data/derivatives/fmriprep_qc/numpy_bold'
-python ${MAINDIR}/scripts/step03_nilearn/nilearn01_glm_posner.py \
+python ${MAINDIR}/scripts/step03_nilearn/nilearn01_glm_posner_block.py \
 --slurm-id ${ID} \
 --task "posner" \
 --fmriprep-dir ${FMRIPREPDIR} \
