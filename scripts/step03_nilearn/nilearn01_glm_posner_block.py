@@ -66,13 +66,13 @@ Path(glm_savedir).mkdir( parents=True, exist_ok=True )
 # %% ---------------------------------
 #     local sandbox
 # ------------------------------------
-sub = "sub-0009"
-ses = "ses-04"
-run_num = 1
-fmriprep_dir = '/Users/h/Documents/projects_local/sandbox'
-events_fname = '/Users/h/Documents/projects_local/spacetop_fractional_analysis/data/beh/beh03_bids/sub-0009/sub-0009_ses-04_task-posner_run-01_events.tsv'
-glm_savedir = '/Users/h/Documents/projects_local/sandbox'
-posner_behfpath = '/Volumes/spacetop_projects_fractional/data/beh/beh03_bids/sub-0009/sub-0009_ses-04_task-posner_run-01_events.tsv'
+# sub = "sub-0009"
+# ses = "ses-04"
+# run_num = 1
+# fmriprep_dir = '/Users/h/Documents/projects_local/sandbox'
+# events_fname = '/Users/h/Documents/projects_local/spacetop_fractional_analysis/data/beh/beh03_bids/sub-0009/sub-0009_ses-04_task-posner_run-01_events.tsv'
+# glm_savedir = '/Users/h/Documents/projects_local/sandbox'
+# posner_behfpath = '/Volumes/spacetop_projects_fractional/data/beh/beh03_bids/sub-0009/sub-0009_ses-04_task-posner_run-01_events.tsv'
 # %% ---------------------------------
 #     load beh, fmri, confound data
 # ------------------------------------
