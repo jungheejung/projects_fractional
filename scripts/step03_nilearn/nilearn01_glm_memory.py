@@ -180,11 +180,11 @@ plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_c
 plt.close()
 
 plotting.plot_contrast_matrix(study_gt_math, design_matrix=design_matrix)
-plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-studyGTmath.png")) 
+plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-studyGTmath.png")) 
 plt.close()
 
 plotting.plot_contrast_matrix(test_gt_math, design_matrix=design_matrix)
-plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-testGTmath.png")) 
+plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-testGTmath.png")) 
 plt.close()
 
 # effect size map and Z-maps __________________
@@ -241,6 +241,6 @@ beta_test_gt_math.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_r
 
 Z_study_gt_test.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-encodeGTretrieval_stat-zmap.nii.gz"))
 Z_study_gt_math.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-encodeGTmath-zmap.nii.gz"))
-Z_test_gt_math.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-retrievalGTmath-zmap.nii.gz"))
+Z_test_gt_math.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-retrievalGTmath-zmap.nii.gz"))
 
 # %%
