@@ -177,3 +177,107 @@ for posner_fpath in sorted(posner_flist):
 
 
 # %%
+# %% -----------------------------------------------
+#                      memory
+# -------------------------------------------------
+"""
+<< memory_beh.csv >>
+    * extract trigger onset 
+    * (we'll use this to subtract from all onsets)
+
+<< study01_beh.csv >>
+trial_type: 
+    * study_dummy (event02_dummy_stimuli_type)
+    * 'study' (event02_dummy_stimuli_type)
+image_fname
+    * [event02_image_filename]
+onset:
+    * [RAW_event02_image_onset] [event02_image_onset]
+duration
+    * [RAW_event03_isi_onset] - [RAW_event02_image_onset]
+
+<< test01_beh.csv >>
+trial_type
+    * 'test'
+image_fname
+    * [event02_image_filename]
+onset
+    * [event02_image_onset]
+duration
+    * [event03_RT]
+pmod_accuracy
+    * [event03_response_key] (fill NA with 0)
+    * compare with [param_answer]
+
+"""
+task_name = "memory"
+current_path = Path.cwd()
+main_dir = current_path.parent.parent #
+main_dir = '/Users/h/Documents/projects_local/spacetop_fractional_analysis'
+beh_inputdir = join(main_dir, 'data', 'beh', 'beh02_preproc')
+
+# memory_flist = glob.glob(join(beh_inputdir, '**', f'*{task_name}*.csv'), recursive=True)
+memory_flist = sorted(glob.glob(join(beh_inputdir, '**', f'*{task_name}_beh.csv'), recursive=True))
+
+for memory_fpath in memory_flist:
+    memory_fname = os.path.basename(memory_fpath)
+    sub_bids = re.search(r'sub-\d+', memory_fname).group(0)
+    ses_bids = re.search(r'ses-\d+', memory_fname).group(0)
+    run_bids = re.search(r'run-\d+', memory_fname).group(0)
+    task_name = re.search(r'run-\d+-(\w+)_beh', memory_fname).group(1)
+    print(f"{sub_bids} {ses_bids} {run_bids} {task_name}")
+    membids_df = pd.DataFrame(columns=['onset', 'duration', 'trial_type', 'pmod_accuracy', 'image_fname'])
+
+    df_memmain = pd.read_csv(memory_fpath)
+    trigger = df_memmain['param_trigger_onset'].values[0]
+
+    # -> << study >>
+    memory_study_flist = sorted(glob.glob(join(beh_inputdir, sub_bids, f'{sub_bids}_ses-04_task-fractional_{run_bids}_memory_study*_beh.csv' )))
+    for memory_study_fname in memory_study_flist:
+        print(os.path.basename(memory_study_fname))
+        df_memstudy = pd.read_csv(memory_study_fname)
+        temp_study = pd.DataFrame(columns=['onset', 'duration', 'trial_type', 'pmod_accuracy', 'image_fname']) #.append(pd.DataFrame(index=range(df_memstudy01.shape[0])))
+        temp_study['trial_type'] = df_memstudy['event02_dummy_stimuli_type'].replace({0: 'dummy', 1: 'study'})
+        temp_study['onset'] = df_memstudy['RAW_event02_image_onset'] - trigger
+        temp_study['duration'] = df_memstudy['RAW_event03_isi_onset'] - df_memstudy['RAW_event02_image_onset']
+        temp_study['image_fname'] = df_memstudy['event02_image_filename']
+        temp_study['pmod_accuracy'] = np.nan
+        membids_df = pd.concat([membids_df, temp_study], ignore_index=True)
+
+    # -> test onset
+    memory_test_flist = sorted(glob.glob(join(beh_inputdir, sub_bids, f'{sub_bids}_ses-04_task-fractional_{run_bids}_memory_test*_beh.csv' )))
+    for memory_test_fname in memory_test_flist:
+        print(os.path.basename(memory_test_fname))
+        df_memtest = pd.read_csv(memory_test_fname)
+        temp_test = pd.DataFrame(columns=['onset', 'duration', 'trial_type', 'pmod_accuracy', 'image_fname']) #.append(pd.DataFrame(index=range(df_memstudy01.shape[0])))
+        temp_test['onset'] = df_memtest['RAW_event02_image_onset'] - trigger
+        temp_test['duration'] = df_memtest['RAW_event03_response_onset'] - df_memtest['RAW_event02_image_onset']
+        temp_test['duration'] = temp_test['duration'].fillna(2) # if duration is na, fill with 2
+        temp_test['image_fname'] = df_memtest['event02_image_filename']
+        df_memtest['event03_response_key'] = df_memtest['event03_response_key'].fillna(0)
+        temp_test['pmod_accuracy'] = (df_memtest['param_answer'] == df_memtest['event03_response_key']).astype(int)
+        temp_test['trial_type'] = 'test'
+        membids_df = pd.concat([membids_df, temp_test], ignore_index=True)
+
+    # -> test onset
+    memory_dist_flist = sorted(glob.glob(join(beh_inputdir, sub_bids, f'{sub_bids}_ses-04_task-fractional_{run_bids}_memory_distraction*_beh.csv' )))
+    for memory_dist_fname in memory_dist_flist:
+        print(os.path.basename(memory_dist_fname))
+        df_memdist = pd.read_csv(memory_dist_fname)
+        temp_dist = pd.DataFrame(columns=['onset', 'duration', 'trial_type', 'pmod_accuracy', 'image_fname']) #.append(pd.DataFrame(index=range(df_memstudy01.shape[0])))
+        temp_dist['onset'] = df_memdist['p2_operation'] - trigger
+        temp_dist['duration'] = 25 #df_memdist['p5_fixation_onset'] - df_memdist['p2_operation']
+        temp_dist['image_fname'] = np.nan
+        temp_dist['pmod_accuracy'] = np.nan
+        temp_dist['trial_type'] = 'math'
+        membids_df = pd.concat([membids_df, temp_dist], ignore_index=True)
+    
+    beh_savedir = join(main_dir, 'data' , 'beh', 'beh03_bids', sub_bids)
+    Path(beh_savedir).mkdir( parents=True, exist_ok=True )
+    save_fname = f"{sub_bids}_ses-04_task-{task_name}_{run_bids}_events.tsv"
+    membids_df.to_csv(join(beh_savedir, save_fname), sep='\t', index=False)
+
+
+
+
+# %%
