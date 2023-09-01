@@ -153,6 +153,7 @@ conditions["why_face"][3] = 1
 conditions["why_hand"][4] = 1
 # %%
 why_gt_how = (conditions["why_face"] + conditions["why_hand"]) - (conditions["how_face"] + conditions["how_hand"])
+how_gt_why = (conditions["how_face"] + conditions["how_hand"]) - (conditions["why_face"] + conditions["why_hand"])
 face_gt_hand = (conditions["how_face"] + conditions["why_face"]) - (conditions["how_hand"] + conditions["why_hand"])
 rating = conditions["buttonpress"]
 
@@ -160,20 +161,26 @@ plotting.plot_contrast_matrix(why_gt_how, design_matrix=design_matrix)
 plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-whyGThow.png")) 
 plt.close()
 
+plotting.plot_contrast_matrix(how_gt_why, design_matrix=design_matrix)
+plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-howGTwhy.png")) 
+plt.close()
+
 plotting.plot_contrast_matrix(face_gt_hand, design_matrix=design_matrix)
-plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-faceGThand.png")) 
+plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-faceGThand.png")) 
 plt.close()
 
 plotting.plot_contrast_matrix(rating, design_matrix=design_matrix)
-plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-rating.png")) 
+plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-04_desc-rating.png")) 
 plt.close()
 
 # effect size map and Z-maps __________________
 beta_why_gt_how = fmri_glm.compute_contrast(why_gt_how, output_type="effect_size")
+beta_how_gt_why = fmri_glm.compute_contrast(how_gt_why, output_type="effect_size")
 beta_face_gt_hand = fmri_glm.compute_contrast(face_gt_hand, output_type="effect_size")
 beta_rating = fmri_glm.compute_contrast(rating, output_type="effect_size")
 
 Z_why_gt_how = fmri_glm.compute_contrast(why_gt_how, output_type="z_score")
+Z_how_gt_why = fmri_glm.compute_contrast(how_gt_why, output_type="z_score")
 Z_face_gt_hand = fmri_glm.compute_contrast(face_gt_hand, output_type="z_score")
 Z_rating = fmri_glm.compute_contrast(rating, output_type="z_score")
 
@@ -190,6 +197,18 @@ plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_c
 plt.close() 
 
 plotting.plot_stat_map(
+    Z_how_gt_why,
+    bg_img=image.mean_img(fmri_img),
+    threshold=3.0,
+    cut_coords=5,
+    display_mode='mosaic',
+    black_bg=True,
+    title="How > Why (Z > 3)",
+)
+plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-howGTwhy_stat-zmap.png")) 
+plt.close() 
+
+plotting.plot_stat_map(
     Z_face_gt_hand,
     bg_img=image.mean_img(fmri_img),
     threshold=3.0,
@@ -198,7 +217,7 @@ plotting.plot_stat_map(
     black_bg=True,
     title="Face > Hand (Z > 3)",
 )
-plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-faceGThand_stat-zmap.png")) 
+plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-faceGThand_stat-zmap.png")) 
 plt.close() 
 
 plotting.plot_stat_map(
@@ -210,16 +229,18 @@ plotting.plot_stat_map(
     black_bg=True,
     title="rating (Z > 3)",
 )
-plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-rating_stat-zmap.png")) 
+plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-04_desc-rating_stat-zmap.png")) 
 plt.close() 
 
 # %% ---------------------------------
 #         save outputs
 # ------------------------------------
 beta_why_gt_how.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-whyGThow_stat-betamap.nii.gz"))
-beta_face_gt_hand.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-faceGThand_stat-betamap.nii.gz"))
-beta_rating.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-rating_stat-betamap.nii.gz"))
+beta_how_gt_why.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-howGTwhy_stat-betamap.nii.gz"))
+beta_face_gt_hand.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-faceGThand_stat-betamap.nii.gz"))
+beta_rating.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-04_desc-rating_stat-betamap.nii.gz"))
 
 Z_why_gt_how.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-whyGThow_stat-zmap.nii.gz"))
-Z_face_gt_hand.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-faceGThand-zmap.nii.gz"))
-Z_rating.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-rating-zmap.nii.gz"))
+Z_how_gt_why.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-howGTwhy_stat-betamap.nii.gz"))
+Z_face_gt_hand.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-faceGThand-zmap.nii.gz"))
+Z_rating.to_filename(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-04_desc-rating-zmap.nii.gz"))
