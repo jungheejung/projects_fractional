@@ -60,13 +60,13 @@ beh_dir = join(main_dir, 'data' , 'beh', 'beh03_bids')
 # fmriprep_dir = '/dartfs-hpc/rc/lab/C/CANlab/labdata/data/spacetop_data/derivatives/fmriprep/results/fmriprep'
 # fmriprep_dir = '/Users/h/Documents/projects_local/sandbox'
 
-# -> glob behavioral file 
+#   -> glob behavioral file 
 saxe_flist = glob.glob(join(beh_dir, '**', f'*{task_name}*.tsv'), recursive=True)
 print(main_dir)
 print(saxe_flist)
 saxe_behfpath = saxe_flist[slurm_id]
 saxe_behfname = os.path.basename(saxe_behfpath)
-# -> extract sub, ses, task , run 
+#   -> extract sub, ses, task , run 
 sub = re.search(r'sub-\d+', saxe_behfname).group(0)
 ses = re.search(r'ses-\d+', saxe_behfname).group(0)
 run = re.search(r'run-\d+', saxe_behfname).group(0)
