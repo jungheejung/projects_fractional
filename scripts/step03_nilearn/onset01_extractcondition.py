@@ -176,7 +176,7 @@ for posner_fpath in sorted(posner_flist):
     events.to_csv(join(beh_savedir, f"{sub_bids}_{ses_bids}_task-{task_name}_{run_bids}_events.tsv"), sep='\t', index=False)
 
 
-# %%
+
 # %% -----------------------------------------------
 #                      memory
 # -------------------------------------------------
@@ -279,5 +279,66 @@ for memory_fpath in memory_flist:
 
 
 
+
+
+# %% -----------------------------------------------
+#                       spunt
+# -------------------------------------------------
+"""
+[param_cond_type_string]: c4_HowHand
+[param_normative_response]: correct answer
+[param_image_filename]: image_fname
+param_trigger_onset
+onset: [event02_image_onset] [RAW_e2_image_onset] - param_trigger_onset
+duration: [event02_image_dur] [RAW_e3_response_onset] - [RAW_e2_image_onset] 
+trial_type:
+button_press: [RAW_e3_response_onset] - [param_trigger_onset]
+pmod_accuracy: [accuracy]
+
+param_normative_response: 1, 2
+event03_response_key: 1,3 -> convert to 1,2
+"""
+task_name = "tomspunt"
+current_path = Path.cwd()
+main_dir = current_path.parent.parent #
+main_dir = '/Users/h/Documents/projects_local/spacetop_fractional_analysis'
+beh_inputdir = join(main_dir, 'data', 'beh', 'beh02_preproc')
+
+# memory_flist = glob.glob(join(beh_inputdir, '**', f'*{task_name}*.csv'), recursive=True)
+spunt_flist = sorted(glob.glob(join(beh_inputdir, '**', f'*{task_name}_beh.csv'), recursive=True))
+for spunt_fpath in spunt_flist:
+    spunt_fname = os.path.basename(spunt_fpath)
+    sub_bids = re.search(r'sub-\d+', spunt_fname).group(0)
+    ses_bids = re.search(r'ses-\d+', spunt_fname).group(0)
+    run_bids = re.search(r'run-\d+', spunt_fname).group(0)
+    task_name = re.search(r'run-\d+-(\w+)_beh', spunt_fname).group(1)
+    print(f"{sub_bids} {ses_bids} {run_bids} {task_name}")
+    df_spunt = pd.read_csv(spunt_fpath)
+
+    events = pd.DataFrame(columns=['onset', 'duration', 'trial_type', 'pmod_accuracy', 'image_fname']) 
+    button = pd.DataFrame(columns=['onset', 'duration', 'trial_type', 'pmod_accuracy', 'image_fname']) 
+    events['onset'] = df_spunt['RAW_e2_image_onset'] - df_spunt['param_trigger_onset']
+    events['duration'] = df_spunt['RAW_e3_response_onset'] - df_spunt['RAW_e2_image_onset'] 
+    df_spunt['trial_type'] = df_spunt['param_cond_type_string'].str.replace('^(c[1234])_', '', regex=True).str.replace(r'([a-z])([A-Z])', r'\1_\2').str.lower()
+    events['trial_type'] = df_spunt['trial_type'].str[:3] + '_' + df_spunt['trial_type'].str[3:]
+    events['image_fname'] = df_spunt['param_image_filename']
+
+
+    df_spunt['reponse_subject'] = df_spunt['event03_response_key'].replace(3, 2)
+    events['pmod_accuracy'] = (df_spunt['param_normative_response'] == df_spunt['reponse_subject']).astype(int)
+
+    button['onset'] = df_spunt['RAW_e3_response_onset'] - df_spunt['param_trigger_onset']
+    button['duration'] = 1
+    button['trial_type'] = 'buttonpress'
+    button['image_fname'] = df_spunt['param_image_filename']
+    button['pmod_accuracy'] = np.nan
+
+    events = pd.concat([events, button], ignore_index=True)
+
+    beh_savedir = join(main_dir, 'data' , 'beh', 'beh03_bids', sub_bids)
+    Path(beh_savedir).mkdir( parents=True, exist_ok=True )
+    save_fname = f"{sub_bids}_ses-04_task-{task_name}_{run_bids}_events.tsv"
+    events.to_csv(join(beh_savedir, save_fname), sep='\t', index=False)
+# Print the updated DataFrame
 
 # %%
