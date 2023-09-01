@@ -203,7 +203,7 @@ plotting.plot_stat_map(
     cut_coords=5,
     display_mode='mosaic',
     black_bg=True,
-    title="encode > retrieval (Z > 3)",
+    title="Encode > Retrieval (Z > 3)",
 )
 plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-01_desc-encodeGTretrieval_stat-zmap.png")) 
 plt.close() 
@@ -215,7 +215,7 @@ plotting.plot_stat_map(
     cut_coords=5,
     display_mode='mosaic',
     black_bg=True,
-    title="encode > retrieval (Z > 3)",
+    title="Encode > Math (Z > 3)",
 )
 plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-02_desc-encodeGTmath_stat-zmap.png")) 
 plt.close() 
@@ -227,7 +227,7 @@ plotting.plot_stat_map(
     cut_coords=5,
     display_mode='mosaic',
     black_bg=True,
-    title="encode > retrieval (Z > 3)",
+    title="Retrieval > Math (Z > 3)",
 )
 plt.savefig(join(glm_savedir, f"{sub}_{ses}_task-{task_name}_run-{run_num:02d}_con-03_desc-retrievalGTmath_stat-zmap.png")) 
 plt.close() 
