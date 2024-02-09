@@ -150,7 +150,7 @@ for saxe_fpath in sorted(saxe_flist):
 
 
     events_json = {"onset": description_onset,
-                "duration": description_duration, 
+                    "duration": description_duration, 
                     "event_type": description_eventtype, 
                     "value":description_value,
                     "response_accuracy":description_accuracy,
@@ -421,7 +421,7 @@ beh_inputdir = join(main_dir, 'data', 'beh', 'beh02_preproc')
 
 # memory_flist = glob.glob(join(beh_inputdir, '**', f'*{task_name}*.csv'), recursive=True)
 memory_flist = sorted(glob.glob(join(beh_inputdir, '**', f'*{task_name}_beh.csv'), recursive=True))
-
+# %%
 for memory_fpath in memory_flist:
     memory_fname = os.path.basename(memory_fpath)
     sub_bids = re.search(r'sub-\d+', memory_fname).group(0)
@@ -429,7 +429,7 @@ for memory_fpath in memory_flist:
     run_bids = re.search(r'run-\d+', memory_fname).group(0)
     task_name = re.search(r'run-\d+-(\w+)_beh', memory_fname).group(1)
     print(f"{sub_bids} {ses_bids} {run_bids} {task_name}")
-    membids_df = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'pmod_accuracy', 'image_fname'])
+    membids_df = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'value', 'response_accuracy', 'stim_file', 'button_press'])
 
     df_memmain = pd.read_csv(memory_fpath)
     trigger = df_memmain['param_trigger_onset'].values[0]
@@ -439,7 +439,7 @@ for memory_fpath in memory_flist:
     for memory_study_fname in memory_study_flist:
         print(os.path.basename(memory_study_fname))
         df_memstudy = pd.read_csv(memory_study_fname)
-        temp_study = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'value', 'response_accuracy', 'stim_file', 'button_press']) #.append(pd.DataFrame(index=range(df_memstudy01.shape[0])))
+        temp_study = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'value', 'response_accuracy', 'stim_file', 'button_press', 'reaction_time']) #.append(pd.DataFrame(index=range(df_memstudy01.shape[0])))
 
         temp_study['onset'] = df_memstudy['RAW_event02_image_onset'] - trigger
         temp_study['duration'] = df_memstudy['RAW_event03_isi_onset'] - df_memstudy['RAW_event02_image_onset']
@@ -448,6 +448,7 @@ for memory_fpath in memory_flist:
         temp_study['stim_file'] = df_memstudy['event02_image_filename']
         temp_study['response_accuracy'] = "n/a" #np.nan TODO: reverse inference and go back 
         temp_study['button_press'] = "n/a"
+        temp_study['reaction_time'] = "n/a"
         membids_df = pd.concat([membids_df, temp_study], ignore_index=True)
 
     # -> test onset
@@ -455,16 +456,17 @@ for memory_fpath in memory_flist:
     for memory_test_fname in memory_test_flist:
         print(os.path.basename(memory_test_fname))
         df_memtest = pd.read_csv(memory_test_fname)
-        temp_test = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'value', 'response_accuracy', 'stim_file', 'button_press']) #.append(pd.DataFrame(index=range(df_memstudy01.shape[0])))
+        temp_test = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'value', 'response_accuracy', 'stim_file', 'button_press', 'reaction_time']) #.append(pd.DataFrame(index=range(df_memstudy01.shape[0])))
         temp_test['onset'] = df_memtest['RAW_event02_image_onset'] - trigger
         temp_test['duration'] = df_memtest['RAW_event03_response_onset'] - df_memtest['RAW_event02_image_onset']
         temp_test['duration'] = temp_test['duration'].fillna(2) # if duration is na, fill with 2
         temp_test['event_type'] = 'test'
-        temp_test['value'] = 
+        temp_test['value'] =  df_memtest['param_answer'].replace({0: 'test_new', 1:'test_old'})
         temp_test['stim_file'] = df_memtest['event02_image_filename']
         df_memtest['event03_response_key'] = df_memtest['event03_response_key'].fillna(0)
-        temp_test['response_accuracy'] = (df_memtest['param_answer'] == df_memtest['event03_response_key']).astype(int)
-        temp_test['button_press'] = df_memtest.event03_response_keyname
+        temp_test['response_accuracy'] = (df_memtest['param_answer'] == df_memtest['event03_response_key']).astype(int).respace({0: 'incorrect', 1:'correct'})
+        temp_test['button_press'] = df_memtest.event03_response_keyname.replace({'right': 'new', 'left':'old', 'NaN': 'n/a', 'nan': 'n/a'})
+        temp_test['reaction_time'] = "n/a"
         membids_df = pd.concat([membids_df, temp_test], ignore_index=True)
 # % ` param_answer ` 1 = old, 0 = new
 # event03_response_keyname: old is on left; new is on right
@@ -474,12 +476,15 @@ for memory_fpath in memory_flist:
     for memory_dist_fname in memory_dist_flist:
         print(os.path.basename(memory_dist_fname))
         df_memdist = pd.read_csv(memory_dist_fname)
-        temp_dist = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'pmod_accuracy', 'image_fname']) #.append(pd.DataFrame(index=range(df_memstudy01.shape[0])))
+        temp_dist = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'value', 'response_accuracy', 'stim_file',  'button_press', 'reaction_time']) #.append(pd.DataFrame(index=range(df_memstudy01.shape[0])))
         temp_dist['onset'] = df_memdist['p2_operation'] - trigger
-        temp_dist['duration'] = 25 #df_memdist['p5_fixation_onset'] - df_memdist['p2_operation']
+        temp_dist['duration'] = 25 
+        temp_dist['event_type'] = 'distraction_math'
+        temp_dist['value'] = 'math'
         temp_dist['stim_file'] = "n/a"
         temp_dist['response_accuracy'] = "n/a"
-        temp_dist['event_type'] = 'math'
+        temp_dist['button_press'] = "n/a"
+        temp_dist['reaction_time'] = "n/a"
         membids_df = pd.concat([membids_df, temp_dist], ignore_index=True)
     
     beh_savedir = join(main_dir, 'data' , 'beh', 'beh03_bids', sub_bids)
@@ -488,9 +493,101 @@ for memory_fpath in memory_flist:
     membids_df.to_csv(join(beh_savedir, save_fname), sep='\t', index=False)
 
 
+    description_onset = {
+        "LongName": "Onset time of event",
+        "Description": "Marks the start of an ongoing event of temporal extent.",
+        "Units": "s",
+        "HED": "Property/Data-property/Data-marker/Temporal-marker/Onset"
+    }
+    description_duration = {
+        "LongName": "The period of time during which an event occurs. Refers to Image duration or response time after stimulus depending on event_type",
+        "Description": "a. For falsebelief and falsephoto trial types, duration refers to the image presentations of falsebelief and falsephoto stories. b. For rating_falsebelief and rating_falsephoto, duration refers to the response time to answer true false questions, followed by falsebelief or flasephoto stimulu",
+        "Units": "s",
+        "HED": "Property/Data-property/Data-value/Spatiotemporal-value/Temporal-value/Duration"} #[x]
+
+    description_eventtype = {
+        "LongName": "Event category",
+        "Description": "Categorical variable of event types within run",
+        "Levels": {
+            "dummy": "Study phase items, but intended to be excluded from analysis due to primacy or recency effects. These items are presented in the first three or last three orders",
+            "study": "Study phase items: Participants are shown items (e.g., images) to memorize for subsequent testing. This phase aims to encode the items into participants' memory.",
+            "test": "Test phase items: Participants are asked to identify previously studied items ('old') and distinguish them from new, unstudied items ('new'), assessing recall and recognition abilities.",
+            "distraction_math": "Simple math problems are presented to participants, serving to temporarily divert attention from the study-test sequence. This task is designed to mitigate rehearsal and reduce potential carry-over effects between the study and test phases."
+        },
+        "HED": {
+            "dummy": "Action/Think/Encode",
+            "study": "Action/Think/Encode", 
+            "test":"Action/Think/Recall",
+            "distraction_math":"Action/Think/Count"
+            }
+    } # [x]
+
+    description_value = {
+        "LongName": "The levels of study items and test items",
+        "Description":"",
+        "Levels": {"study_dummy": "Presentation of items to study - the first and the last three items are discarded due to primary/recency effects, indicated as dummy.",
+                "study": "Presentation of items to study",
+                "test_old":"Test phase items: items that were presented during study phase",
+                "test_new":"Test phase items: items that were not presented during study phase; new items presented to participant during test phase",
+                "math":"Simple math problems presented during math phase"
+                },
+        "HED": {"study_dummy": "Action/Perform/Read",
+                "study": "Action/Think/Encode",
+                "test_old": "Action/Think/Recall",
+                "test_new":"Action/Think/Recall",
+                "math":"Action/Think/Count"} # Q. Is this the right HED?
+    }
 
 
+    description_accuracy = {
+        "LongName": "Correct or Incorrect response",
+        "Description": "Correct or Incorrect response in regards to question presented on screen; Options are Old and New, presented on screen, underneath image. Participants are promted to respond with MR-compatible button box",
+        "Levels": {
+            "correct": "Correct response in regards to image (correctly identified as old or new)",
+            "incorrect": "Incorrect response in regards to image (incorrectly identified as old or new)"
+        },
+        "HED": { 
+            "correct": "Property/Task-property/Task-action-type/Correct-action", 
+            "incorrect": "Property/Task-property/Task-action-type/Incorrect-action"
+            }
+    } #[x]
 
+    description_stimfile =  {
+            "LongName": "Stimulus filename which is presented on screen",
+            "Description": "Given text file encompasses test that is displayed on screen. Filename is designated as {digit}{belief_or_photo}_{story_or_question}.txt. Digit indicates the number of stimulus that was presented. b or p indicates whether stimulus was false belief or false photo event. Story or question indicates which event was presented on screen.",
+            "HED": "(Textblock, Pathname/#)"
+        }
+
+    description_buttonpress =  {
+            "LongName": "Key press",
+            "Description": "Given text file encompasses test that is displayed on screen. Filename is designated as {digit}{belief_or_photo}_{story_or_question}.txt. Digit indicates the number of stimulus that was presented. b or p indicates whether stimulus was false belief or false photo event. Story or question indicates which event was presented on screen.",
+            "Levels": {
+                "old": "Participant presses old button to indicate they saw the item during the study phase. Old option is presented on the left side of the screen", 
+                "new": "Participant presses new button to indicate they did not see the item during the study phase. New option is presented on the right side of the screen"},
+            "HED": {
+                "old": "Action/Move/Move-body-part/Move-upper-extremity/Press", 
+                "new": "Action/Move/Move-body-part/Move-upper-extremity/Press"
+        }
+    }
+    
+    description_rt=  {
+        "LongName": "Reaction time of responding to test item",
+        "Description": "Reaction time is measure as the time of button press minus the time of test item presentation",
+        "HED": ""
+    }
+    events_json = {"onset": description_onset,
+                   "duration": description_duration, 
+                   "event_type": description_eventtype, 
+                   "value":description_value,
+                   "response_accuracy":description_accuracy,
+                   "stim_file": description_stimfile,
+                   "button_press":description_buttonpress,
+                   "reaction_time":description_rt,
+                   }  
+    # TODO: change fname to be subject specific
+    json_fname = join(beh_savedir, f"{sub_bids}_{ses_bids}_task-{task_name}_{run_bids}_events.json")
+    with open(json_fname, 'w') as file:
+        json.dump(events_json, file, indent=4)
 # %% -----------------------------------------------
 #                       spunt
 # -------------------------------------------------
@@ -525,23 +622,23 @@ for spunt_fpath in spunt_flist:
     print(f"{sub_bids} {ses_bids} {run_bids} {task_name}")
     df_spunt = pd.read_csv(spunt_fpath)
 
-    events = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'pmod_accuracy', 'image_fname']) 
-    button = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'pmod_accuracy', 'image_fname']) 
+    events = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'response_accuracy', 'image_fname']) 
+    button = pd.DataFrame(columns=['onset', 'duration', 'event_type', 'response_accuracy', 'image_fname']) 
     events['onset'] = df_spunt['RAW_e2_image_onset'] - df_spunt['param_trigger_onset']
     events['duration'] = df_spunt['RAW_e3_response_onset'] - df_spunt['RAW_e2_image_onset'] 
     df_spunt['event_type'] = df_spunt['param_cond_type_string'].str.replace('^(c[1234])_', '', regex=True).str.replace(r'([a-z])([A-Z])', r'\1_\2').str.lower()
     events['event_type'] = df_spunt['event_type'].str[:3] + '_' + df_spunt['event_type'].str[3:]
-    events['image_fname'] = df_spunt['param_image_filename']
+    events['stim_file'] = df_spunt['param_image_filename']
 
 
     df_spunt['reponse_subject'] = df_spunt['event03_response_key'].replace(3, 2)
-    events['pmod_accuracy'] = (df_spunt['param_normative_response'] == df_spunt['reponse_subject']).astype(int)
+    events['response_accuracy'] = (df_spunt['param_normative_response'] == df_spunt['reponse_subject']).astype(int)
 
     button['onset'] = df_spunt['RAW_e3_response_onset'] - df_spunt['param_trigger_onset']
     button['duration'] = 1
     button['event_type'] = 'buttonpress'
-    button['image_fname'] = df_spunt['param_image_filename']
-    button['pmod_accuracy'] = np.nan
+    button['stim_file'] = df_spunt['param_image_filename']
+    button['response_accuracy'] = np.nan
 
     events = pd.concat([events, button], ignore_index=True)
 
